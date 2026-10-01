@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# libraries hold copyrighted sources, caches and indexes: keep them local
+libraries/*/
+!libraries/.gitkeep
+corpus/

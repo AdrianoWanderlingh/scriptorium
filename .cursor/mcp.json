@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "scriptorium": {
+      "command": "uv",
+      "args": ["run", "scriptorium", "serve"]
+    }
+  }
+}
