@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>__TITLE__</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root { --bg:#14161a; --panel:#1d2026; --text:#e6e6e6; --muted:#9aa0a6; --accent:#8ab4f8; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--text);
+         display:grid; grid-template-columns: minmax(0, 1fr) 380px; height:100vh; overflow:hidden; }
+  #net { height:100vh; min-width:0; }
+  aside { background:var(--panel); padding:14px 16px; overflow-y:auto; border-left:1px solid #2b2f36; }
+  h1 { font-size:16px; margin:0 0 4px; } h2 { font-size:15px; margin:14px 0 6px; color:var(--accent); }
+  .muted { color:var(--muted); font-size:12px; }
+  input[type=search] { width:100%; padding:7px 9px; border-radius:6px; border:1px solid #3a3f47;
+         background:#111317; color:var(--text); margin:10px 0 6px; }
+  #authors label { display:inline-flex; align-items:center; gap:4px; margin:2px 8px 2px 0; font-size:12px; cursor:pointer; }
+  .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .ev { background:#111317; border-left:3px solid var(--accent); padding:6px 8px; margin:6px 0; font-size:12.5px; }
+  code { color:#f6c177; font-size:12px; } ul { padding-left:18px; margin:4px 0; }
+  button { background:#2b2f36; color:var(--text); border:1px solid #3a3f47; border-radius:6px; padding:4px 9px; cursor:pointer; }
+</style></head>
+<body><div id="net"></div>
+<aside>
+  <h1 id="title"></h1><div class="muted" id="desc"></div>
+  <input type="search" id="q" placeholder="Cerca nodo (entità, libro, nota)…">
+  <div id="authors"></div>
+  <div style="margin:6px 0"><button id="reset">Mostra tutto</button> <button id="physics">Ferma layout</button></div>
+  <div class="muted">Clic: dettagli · doppio clic: isola il vicinato · rettangoli = libri, cerchi = entità
+  (dimensione = menzioni), stelle = note wiki, spessore arco = passaggi in comune.</div>
+  <div id="info"><h2>Seleziona un nodo</h2><p class="muted">Gli id <code>doc#0001</code> si aprono con
+  <code>scriptorium read ID</code> o con il tool MCP <code>read</code>.</p></div>
+</aside>
+<script>
+const G = __DATA__;
+document.getElementById('title').textContent = 'Scriptorium · ' + G.library;
+document.getElementById('desc').textContent = G.description || '';
+const nodes = new vis.DataSet(G.nodes.map(n => ({...n, font: {color: n.group === 'doc' ? '#111' : '#ddd',
+  size: n.group === 'doc' ? 15 : 12}, title: n.label})));
+const edges = new vis.DataSet(G.edges.map((e, i) => ({id: i, ...e, color: e.color || {color: '#5f6670', opacity: 0.55}})));
+const net = new vis.Network(document.getElementById('net'), {nodes, edges}, {
+  nodes: {scaling: {min: 6, max: 42}, borderWidth: 1},
+  edges: {scaling: {min: 0.5, max: 7}, smooth: false},
+  physics: {solver: 'forceAtlas2Based', forceAtlas2Based: {gravitationalConstant: -60, springLength: 110},
+            stabilization: {iterations: 250}},
+  interaction: {hover: true, tooltipDelay: 120}});
+let physicsOn = true;
+document.getElementById('physics').onclick = e => { physicsOn = !physicsOn;
+  net.setOptions({physics: {enabled: physicsOn}}); e.target.textContent = physicsOn ? 'Ferma layout' : 'Riattiva layout'; };
+
+const hidden = new Set();
+const authorsBox = document.getElementById('authors');
+Object.entries(G.colors).forEach(([a, c]) => {
+  const l = document.createElement('label');
+  l.innerHTML = `<input type="checkbox" checked><span class="sw" style="background:${c}"></span>${a}`;
+  l.querySelector('input').onchange = ev => { ev.target.checked ? hidden.delete(a) : hidden.add(a); applyFilter(); };
+  authorsBox.appendChild(l);
+});
+function applyFilter(keep) {
+  nodes.update(G.nodes.map(n => ({id: n.id, hidden: hidden.has(n.author) || (keep ? !keep.has(n.id) : false)})));
+}
+document.getElementById('reset').onclick = () => { applyFilter(); net.fit(); };
+net.on('doubleClick', p => { if (!p.nodes.length) return;
+  const keep = new Set([p.nodes[0], ...net.getConnectedNodes(p.nodes[0])]); applyFilter(keep); net.fit({nodes: [...keep]}); });
+
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+function show(id) {
+  const n = G.nodes.find(x => x.id === id); if (!n) return; const i = n.info; let h = '';
+  if (i.type === 'document') {
+    h = `<h2>${esc(i.title)}</h2><div class="muted">${esc(i.author)} ${esc(i.year)} · ${esc(i.format)} · <code>${esc(i.id)}</code></div>
+      <p><b>Keywords:</b> ${i.keywords.map(esc).join(', ')}</p><b>Sezioni</b><ul>${i.sections.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      <div class="muted">scriptorium -l ${esc(G.library)} outline ${esc(i.id)}</div>`;
+  } else if (i.type === 'entity') {
+    h = `<h2>${esc(i.name)}</h2><div class="muted">${i.mentions} menzioni</div>
+      <p><b>Documenti:</b> ${Object.entries(i.docs).map(([d, c]) => `${esc(d)} (${c})`).join(', ')}</p>
+      <p><b>Collegata a:</b> ${i.related.map(esc).join(', ') || '—'}</p><b>Prime occorrenze</b>
+      ${i.evidence.map(e => `<div class="ev"><code>${esc(e.id)}</code><br>${esc(e.text)}</div>`).join('')}
+      <div class="muted">scriptorium -l ${esc(G.library)} related "${esc(i.name)}"</div>`;
+  } else {
+    h = `<h2>★ ${esc(i.title)}</h2><div class="muted">nota wiki · <code>note-${esc(i.slug)}</code></div>
+      <div class="ev" style="white-space:pre-wrap">${esc(i.text)}</div><b>Fonti</b><ul>${i.sources.map(s => `<li><code>${esc(s)}</code></li>`).join('')}</ul>`;
+  }
+  document.getElementById('info').innerHTML = h;
+}
+net.on('click', p => { if (p.nodes.length) show(p.nodes[0]); });
+document.getElementById('q').addEventListener('input', ev => {
+  const q = ev.target.value.trim().toLowerCase(); if (q.length < 2) return;
+  const hit = G.nodes.find(n => n.label.toLowerCase().includes(q));
+  if (hit) { net.selectNodes([hit.id]); net.focus(hit.id, {scale: 1.3, animation: true}); show(hit.id); }
+});
+</script></body></html>

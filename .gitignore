@@ -7,3 +7,6 @@ __pycache__/
 libraries/*/
 !libraries/.gitkeep
 corpus/
+
+# generated per-library skills (they describe private collections)
+skills/generated/

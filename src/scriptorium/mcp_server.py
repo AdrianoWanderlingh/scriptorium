@@ -52,16 +52,25 @@ def overview(library: str | None = None) -> str:
 
 
 @server.tool()
-def search(query: str, also: list[str] | None = None, library: str | None = None, k: int = 8,
-           author: str | None = None, doc: str | None = None, kind: str | None = None,
-           per_doc: int | None = None, full: bool = False) -> str:
+def search(
+    query: str,
+    also: list[str] | None = None,
+    library: str | None = None,
+    k: int = 8,
+    author: str | None = None,
+    doc: str | None = None,
+    kind: str | None = None,
+    per_doc: int | None = None,
+    full: bool = False,
+) -> str:
     """Hybrid semantic + keyword search with reranking. Returns short snippets with citable ids.
     `also`: 1-3 extra phrasings fused with the query — ALWAYS include a translation into the language of
     the books plus period/technical vocabulary (e.g. query 'matrimonio per denaro', also ['marrying for
     money', 'fortune settlement income']). Filters: author (substring), doc (comma-separated doc ids),
     kind ('book' or 'note'), per_doc (max hits per document; 1-2 to compare works)."""
-    return render.hits(_lib(library).search(query, k=k, author=author, doc=doc, kind=kind,
-                                            per_doc=per_doc, also=also), full=full)
+    return render.hits(
+        _lib(library).search(query, k=k, author=author, doc=doc, kind=kind, per_doc=per_doc, also=also), full=full
+    )
 
 
 @server.tool()
@@ -90,16 +99,22 @@ def related(entity: str, library: str | None = None, top: int = 12) -> str:
 
 
 @server.tool()
-def style(author: str | None = None, doc: str | None = None, theme: str | None = None,
-          library: str | None = None, examples: int = 3) -> str:
+def style(
+    author: str | None = None,
+    doc: str | None = None,
+    theme: str | None = None,
+    library: str | None = None,
+    examples: int = 3,
+) -> str:
     """Style card for writing in the voice of an author (or of specific doc ids): measured traits,
     distinctive vocabulary and exemplar passages, optionally on a theme."""
     return render.style(_lib(library).style(author=author, doc=doc, theme=theme, examples=examples))
 
 
 @server.tool()
-def write_note(title: str, body: str, sources: list[str] | None = None, tags: list[str] | None = None,
-               library: str | None = None) -> str:
+def write_note(
+    title: str, body: str, sources: list[str] | None = None, tags: list[str] | None = None, library: str | None = None
+) -> str:
     """Save a synthesis (markdown) into the library wiki; it becomes searchable (kind='note').
     Always pass the passage ids it is based on as sources."""
     r = _lib(library).write_note(title, body, sources=sources, tags=tags)

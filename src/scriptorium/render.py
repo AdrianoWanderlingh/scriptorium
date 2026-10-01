@@ -30,8 +30,10 @@ def overview(o: dict) -> str:
     for d in o["docs"]:
         who = f"{d['author']}, " if d["author"] else ""
         year = f" ({d['year']})" if d["year"] else ""
-        lines.append(f"- {d['id']}: {who}{d['title']}{year} [{d['format']}, {d['sections']} sections] — "
-                     + ", ".join(d["keywords"]))
+        lines.append(
+            f"- {d['id']}: {who}{d['title']}{year} [{d['format']}, {d['sections']} sections] — "
+            + ", ".join(d["keywords"])
+        )
     if o["cross_book_entities"]:
         lines += ["", "Entities linking several documents:", "  " + "; ".join(o["cross_book_entities"])]
     lines += ["", "Most mentioned: " + ", ".join(o["top_entities"])]
@@ -73,10 +75,11 @@ def style(s: dict) -> str:
     lines = [
         f"STYLE CARD — {', '.join(s['target'])} ({c['words']:,} words analysed)",
         *[f"- {t}" for t in s["guidance"]],
-        f"- Punctuation per 1000 words: " + ", ".join(f"{k} {v}" for k, v in p.items()),
+        "- Punctuation per 1000 words: " + ", ".join(f"{k} {v}" for k, v in p.items()),
         f"- Distinctive vocabulary (vs rest of library): {', '.join(c['distinctive_words'])}",
         f"- Typical sentence openings: {', '.join(c['typical_sentence_openings'])}",
-        "", "EXEMPLAR PASSAGES (imitate rhythm and diction, do not copy):",
+        "",
+        "EXEMPLAR PASSAGES (imitate rhythm and diction, do not copy):",
     ]
     for e in s["exemplars"]:
         lines.append(f"\n{e['cite']}\n« {e['text']} »")

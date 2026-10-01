@@ -12,7 +12,10 @@ from .ingest import Document
 ROMAN = r"[IVXLCDM]+"
 NUM = rf"(?:{ROMAN}|\d+|[A-Za-z]+)"
 LEVEL1 = r"VOLUME|Volume|VOLUMEN|BOOK|Book|LIBRO|Libro|PART|Part|PARTE|Parte|ACT|Act|Actus|ATTO|Atto|TOMO|Tomo"
-LEVEL2 = r"CHAPTER|Chapter|CAPITOLO|Capitolo|CAP\.|Cap\.|CANTO|Canto|SCENE|Scene|Scena|Scoena|Scaena|SECTION|Section|SEZIONE|Sezione|STAVE|Stave"
+LEVEL2 = (
+    r"CHAPTER|Chapter|CAPITOLO|Capitolo|CAP\.|Cap\.|CANTO|Canto|SCENE|Scene|Scena|Scoena|Scaena"
+    r"|SECTION|Section|SEZIONE|Sezione|STAVE|Stave"
+)
 HEADING_RE = re.compile(rf"^\s*(?:(?P<l1>{LEVEL1})|(?P<l2>{LEVEL2}))\b[ .]*{NUM}\b.*$")
 MD_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 ROMAN_TITLE_RE = re.compile(rf"^{ROMAN}\.\s+[A-Z][^.!?\"“]{{2,70}}$")
@@ -94,17 +97,29 @@ def _heading(block: str, allow_caps: bool) -> tuple[int, str] | None:
         return (1 if m.group("l1") else 2), block.strip()
     if ROMAN_TITLE_RE.match(block):
         return 2, block.strip()
-    if (allow_caps and 3 < len(block) < 70 and block.isupper() and re.search(r"[A-Z]{3}", block)
-            and not INITIAL_SIGNATURE_RE.match(block)):
+    if (
+        allow_caps
+        and 3 < len(block) < 70
+        and block.isupper()
+        and re.search(r"[A-Z]{3}", block)
+        and not INITIAL_SIGNATURE_RE.match(block)
+    ):
         return 2, block.strip()
     return None
 
 
 def _is_chapter_subtitle(block: str, next_block: str | None) -> bool:
     n_words = len(block.split())
-    return (next_block is not None and len(block) < 70 and n_words <= 10 and "\n" not in block
-            and block[:1].isupper() and not re.search(r"[\"“”'‘]", block[:2])
-            and not block.endswith((",", ";", ":")) and (not block.endswith(".") or n_words <= 6))
+    return (
+        next_block is not None
+        and len(block) < 70
+        and n_words <= 10
+        and "\n" not in block
+        and block[:1].isupper()
+        and not re.search(r"[\"“”'‘]", block[:2])
+        and not block.endswith((",", ";", ":"))
+        and (not block.endswith(".") or n_words <= 6)
+    )
 
 
 def structure(doc: Document, chunk_chars: int = 1400) -> tuple[list[Section], list[Chunk]]:
@@ -152,8 +167,17 @@ def structure(doc: Document, chunk_chars: int = 1400) -> tuple[list[Section], li
         nonlocal buf
         if buf:
             text = "\n\n".join(buf)
-            chunks.append(Chunk(doc.doc_id, len(chunks), buf_section, sections[buf_section].title,
-                                doc.page_at(buf_start), buf_start, text))
+            chunks.append(
+                Chunk(
+                    doc.doc_id,
+                    len(chunks),
+                    buf_section,
+                    sections[buf_section].title,
+                    doc.page_at(buf_start),
+                    buf_start,
+                    text,
+                )
+            )
             buf = []
 
     for section_idx, offset, text in paragraphs:

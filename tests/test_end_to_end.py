@@ -49,7 +49,14 @@ def test_round_trip(tmp_path: Path):
     assert "Gabriele Basilico" in hits
 
     assert "Il colore non è decorazione" in run("read", "prova-saggio-sul-paesaggio#0000", "--after", "1", home=home)
-    assert "Saved" in run("note", "Sintesi colore", "--body", "Il colore come temperatura emotiva.",
-                          "-s", "prova-saggio-sul-paesaggio#0001", home=home)
+    assert "Saved" in run(
+        "note",
+        "Sintesi colore",
+        "--body",
+        "Il colore come temperatura emotiva.",
+        "-s",
+        "prova-saggio-sul-paesaggio#0001",
+        home=home,
+    )
     assert "note-sintesi-colore" in run("search", "temperatura emotiva", "--kind", "note", "-k", "1", home=home)
     assert "'changed': 0" in run("build", home=home)

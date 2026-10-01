@@ -29,7 +29,8 @@ S=.venv/bin/scriptorium
 $S new fotoITA --description "Fotografia italiana: libri, cataloghi, miei scritti" \
    --topic "fotografia italiana" --language Italian
 $S -l fotoITA add ~/Documents/libri-foto ~/Documents/miei-scritti   # copies + builds incrementally
-$S -l fotoITA skill                                                 # → ~/.cursor/skills/knowledge-base-fotoITA
+$S skills          # symlinks `scriptorium` + `knowledge-base-*` skills into ~/.cursor/skills and ~/.claude/skills
+$S -l fotoITA graph --open                                          # interactive graph (HTML + graph.json)
 
 $S -l fotoITA overview
 $S -l fotoITA search "Ghirri e il colore" --also "Ghirri colour Kodachrome" --per-doc 2
@@ -59,6 +60,19 @@ libraries/<name>/
   index.lance/   (chunks: text + vector + metadata, BM25 index)
   map/docs.json  (outline, keywords, gists)   map/entities.json (entity graph)
   wiki/*.md      (agent-written notes, also indexed)
+  graph.html / graph.json   build-log.jsonl
 ```
 
-Tests: `uv run pytest` (unit tests are model-free; `test_end_to_end.py` runs the real models, ~25 s).
+## In a chat
+
+Say "usa scriptorium …" (or just ask about a library's topic): the `scriptorium` skill knows the
+location, creates and feeds libraries, and hands off to `knowledge-base-<name>` for search, citation
+and writing.
+
+## Quality and docs
+
+- `uv run pytest`: unit tests are model-free; `test_end_to_end.py` runs the real models (~25 s).
+- `uvx ruff check . && uvx ruff format --check .`
+- `uv run python scripts/eval_retrieval.py > docs/eval-$(date +%F).md`: retrieval benchmark (hit@k, MRR).
+- `docs/ROADMAP.md` (measured priorities, known issues), `docs/BUILD_LOG.md` (how it was built),
+  `CHANGELOG.md`, `libraries/<name>/build-log.jsonl` (per-build records).

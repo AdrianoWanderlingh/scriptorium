@@ -14,8 +14,7 @@ os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 warnings.filterwarnings("ignore", module="fastembed")
 warnings.filterwarnings("ignore", category=UserWarning, module="huggingface_hub")
 
-E5_MODELS = {"intfloat/multilingual-e5-small": "onnx/model.onnx",
-             "intfloat/multilingual-e5-base": "onnx/model.onnx"}
+E5_MODELS = {"intfloat/multilingual-e5-small": "onnx/model.onnx", "intfloat/multilingual-e5-base": "onnx/model.onnx"}
 
 
 @lru_cache(maxsize=1)
@@ -28,8 +27,12 @@ def _embedder():
         known = {m["model"] for m in TextEmbedding.list_supported_models()}
         if EMBED_MODEL not in known:
             TextEmbedding.add_custom_model(
-                model=EMBED_MODEL, pooling=PoolingType.MEAN, normalization=True,
-                sources=ModelSource(hf=EMBED_MODEL), dim=EMBED_DIM, model_file=E5_MODELS[EMBED_MODEL],
+                model=EMBED_MODEL,
+                pooling=PoolingType.MEAN,
+                normalization=True,
+                sources=ModelSource(hf=EMBED_MODEL),
+                dim=EMBED_DIM,
+                model_file=E5_MODELS[EMBED_MODEL],
             )
     return TextEmbedding(EMBED_MODEL, threads=THREADS, cache_dir=str(MODEL_CACHE))
 

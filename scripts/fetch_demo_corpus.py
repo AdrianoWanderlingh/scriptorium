@@ -28,8 +28,10 @@ def paragraphs(raw: str) -> list[str]:
 
 
 def to_html(title: str, author: str, raw: str) -> str:
-    parts = [f"<html><head><title>{html.escape(title)}</title></head><body>",
-             f"<h1>{html.escape(title)}</h1><p><em>{html.escape(author)}</em></p>"]
+    parts = [
+        f"<html><head><title>{html.escape(title)}</title></head><body>",
+        f"<h1>{html.escape(title)}</h1><p><em>{html.escape(author)}</em></p>",
+    ]
     for p in paragraphs(raw):
         text = html.escape(re.sub(r"\s+", " ", p))
         parts.append(f"<h2>{text}</h2>" if CHAPTER.match(text) else f"<p>{text}</p>")
@@ -42,7 +44,8 @@ def to_pdf(title: str, author: str, raw: str, path: Path) -> None:
 
     story = pymupdf.Story(html=to_html(title, author, raw))
     writer = pymupdf.DocumentWriter(str(path))
-    rect, where = pymupdf.paper_rect("a5"), pymupdf.paper_rect("a5") + (36, 36, -36, -36)
+    rect = pymupdf.paper_rect("a5")
+    where = rect + (36, 36, -36, -36)  # noqa: RUF005 — Rect arithmetic (inset margins), not tuple concatenation
     more = True
     while more:
         device = writer.begin_page(rect)
@@ -86,8 +89,9 @@ def main() -> None:
         author = re.sub(r"\b([A-Z])\.(?=[A-Z])", r"\1. ", author)
         stem = f"{author} - {title}" + (f" ({year})" if year else "")
         stem = stem.replace("/", "-")
-        catalog.append({"file": fileid, "title": title, "author": author, "year": year,
-                        "words": len(gutenberg.words(fileid))})
+        catalog.append(
+            {"file": fileid, "title": title, "author": author, "year": year, "words": len(gutenberg.words(fileid))}
+        )
         if fileid in AS_HTML:
             (OUT / f"{stem}.html").write_text(to_html(title, author, body))
         elif fileid in AS_PDF:

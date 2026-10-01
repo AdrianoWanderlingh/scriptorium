@@ -54,7 +54,9 @@ def test_chapter_subtitle_is_merged(tmp_path: Path):
 
 def test_verse_keeps_line_breaks(tmp_path: Path):
     path = tmp_path / "William Blake - Poems.txt"
-    path.write_text("THE TYGER\n\nTyger, tyger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\n")
+    path.write_text(
+        "THE TYGER\n\nTyger, tyger, burning bright\nIn the forests of the night,\nWhat immortal hand or eye\n"
+    )
     _, chunks = structure(load(path))
     assert "burning bright\nIn the forests" in chunks[0].text
 
@@ -86,7 +88,10 @@ def test_html_and_pdf(tmp_path: Path):
 
 def test_sentences_respect_abbreviations():
     assert split_sentences("Mr. Knightley came. Mrs. Weston smiled! Then they left.") == [
-        "Mr. Knightley came.", "Mrs. Weston smiled!", "Then they left."]
+        "Mr. Knightley came.",
+        "Mrs. Weston smiled!",
+        "Then they left.",
+    ]
 
 
 def test_entities_and_graph():

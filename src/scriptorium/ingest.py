@@ -54,11 +54,24 @@ def file_sha(path: Path) -> str:
     return h.hexdigest()[:16]
 
 
-def _sidecar_meta(path: Path) -> dict:
+def _sidecar(path: Path) -> Path | None:
     for candidate in (path.with_suffix(path.suffix + ".meta.json"), path.with_suffix(".meta.json")):
         if candidate.exists():
-            return json.loads(candidate.read_text())
-    return {}
+            return candidate
+    return None
+
+
+def _sidecar_meta(path: Path) -> dict:
+    sidecar = _sidecar(path)
+    return json.loads(sidecar.read_text()) if sidecar else {}
+
+
+def source_sha(path: Path) -> str:
+    """Fingerprint of a source: its bytes plus its metadata sidecar, so editing metadata re-indexes."""
+    sidecar = _sidecar(path)
+    if not sidecar:
+        return file_sha(path)
+    return hashlib.sha1((file_sha(path) + file_sha(sidecar)).encode()).hexdigest()[:16]
 
 
 def _filename_meta(path: Path) -> dict:
@@ -98,7 +111,7 @@ def _pdf(path: Path) -> tuple[str, list[tuple[int, int]], dict]:
         parts.append(text)
         cursor += len(text) + 2
     text = "\n\n".join(parts)
-    if len(text.strip()) < 200 * max(1, len(pages)) * 0.1:
+    if len(text.strip()) < 20 * max(1, len(pages)):
         info["warning"] = "little extractable text: probably a scan, run `ocrmypdf -l ita+eng in.pdf out.pdf` first"
     return text, offsets, info
 
@@ -121,8 +134,11 @@ def _via_libreoffice(path: Path) -> Path:
     if not soffice:
         raise RuntimeError(f"{path.suffix} needs LibreOffice (soffice) to convert; install it or save as .docx")
     out = Path(tempfile.mkdtemp())
-    subprocess.run([soffice, "--headless", "--convert-to", "docx", "--outdir", str(out), str(path)],
-                   check=True, capture_output=True)
+    subprocess.run(
+        [soffice, "--headless", "--convert-to", "docx", "--outdir", str(out), str(path)],
+        check=True,
+        capture_output=True,
+    )
     return next(out.glob("*.docx"))
 
 
@@ -154,6 +170,14 @@ def load(path: Path) -> Document:
     year = str(meta.pop("year", ""))
     doc_id = meta.pop("doc_id", None) or slugify(f"{author.split()[-1] if author else ''} {title}")
     return Document(
-        doc_id=doc_id, title=title, author=author, year=year, source_path=str(path),
-        fmt=ext.lstrip("."), text=text, sha=file_sha(path), page_offsets=offsets, meta=meta,
+        doc_id=doc_id,
+        title=title,
+        author=author,
+        year=year,
+        source_path=str(path),
+        fmt=ext.lstrip("."),
+        text=text,
+        sha=source_sha(path),
+        page_offsets=offsets,
+        meta=meta,
     )
