@@ -11,6 +11,7 @@ from scriptorium.ingest import load
 from scriptorium.mapper import build_entity_index, chunk_entities, related
 from scriptorium.structure import split_sentences, structure
 from scriptorium.style import style_card
+from scriptorium.textstats import is_early_modern, modernize
 
 NOVEL = """[Title header]
 
@@ -103,6 +104,14 @@ def test_entities_and_graph():
     linked = [r["entity"] for r in related(index, "Ahab")]
     assert linked[0] in {"Starbuck", "Pequod"} and "Flask" in linked
     assert "Stubb" not in index["entities"]  # only ever seen at sentence start: ambiguous
+
+
+def test_early_modern_spelling_is_modernized_only_where_detected():
+    folio = "Macb. She should haue dy'de heereafter. A Tale told by an Ideot, vpon the Stage. "
+    assert is_early_modern(folio * 20)
+    assert modernize(folio) == "Macb. She should have dy'de hereafter. A Tale told by an Idiot, upon the Stage. "
+    assert modernize("a fellow of infinite Iest") == "a fellow of infinite Jest"
+    assert not is_early_modern("Louisa was very happy; she had never been so continually in love. " * 50)
 
 
 def test_style_card_excludes_names_and_measures_punctuation():

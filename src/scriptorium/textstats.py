@@ -40,6 +40,62 @@ def detect_lang(text: str) -> str:
     return max(scores, key=scores.get) if sample else "en"
 
 
+EARLY_MODERN_MARKERS = re.compile(r"\b(?:haue|vp|vpon|vnto|doe|selfe|beene|heere|onely|giue|loue|euer|vs)\b", re.I)
+EARLY_MODERN_WORDS = {
+    "heere": "here",
+    "beene": "been",
+    "doe": "do",
+    "goe": "go",
+    "selfe": "self",
+    "onely": "only",
+    "mee": "me",
+    "bee": "be",
+    "wee": "we",
+    "hee": "he",
+    "shee": "she",
+    "ideot": "idiot",
+    "yesterdayes": "yesterdays",
+    "breefe": "brief",
+    "deere": "dear",
+    "neere": "near",
+    "feare": "fear",
+    "eare": "ear",
+    "yeare": "year",
+    "heare": "hear",
+    "cleere": "clear",
+    "ha's": "has",
+    "poore": "poor",
+    "heereafter": "hereafter",
+}
+_U_AS_V = re.compile(r"(?<=[aeiouAEIOU])u(?=[aeiou])")
+_V_AS_U = re.compile(r"\b([vV])(?=[^aeiouAEIOU\W])")
+_I_AS_J = re.compile(r"\bI(?=[aeiou][a-z])")
+_WORD = re.compile(r"[A-Za-z']+")
+
+
+def is_early_modern(text: str) -> bool:
+    """Folio/quarto-style orthography (haue, vp, doe...), more than ~3 markers per 1000 words."""
+    sample = text[:200_000]
+    return len(EARLY_MODERN_MARKERS.findall(sample)) * 1000 > 3 * max(1, len(words(sample)))
+
+
+def modernize(text: str) -> str:
+    """Approximate modern spelling for Early Modern English (u/v, i/j, doubled vowels), so that
+    subword embedders see real words. Only for the text that is embedded; citations keep the original."""
+    text = _U_AS_V.sub("v", text)
+    text = _V_AS_U.sub(lambda m: "u" if m.group(1) == "v" else "U", text)
+    text = _I_AS_J.sub("J", text)
+
+    def word(m: re.Match) -> str:
+        w = m.group(0)
+        new = EARLY_MODERN_WORDS.get(w.lower())
+        if new is None:
+            return w
+        return new.capitalize() if w[0].isupper() else new
+
+    return _WORD.sub(word, text)
+
+
 def content_counts(text: str, lang: str) -> Counter:
     stop = STOP.get(lang, set())
     return Counter(w for w in (x.lower() for x in words(text)) if len(w) > 2 and w not in stop)

@@ -3,27 +3,29 @@
 Priorities are based on measurements (`docs/eval-2026-10-01.md`, build logs), not guesses.
 Re-run `scripts/eval_retrieval.py` after every retrieval change and record the new table.
 
-## Measured baseline (v0.2.0, demo library, 14 blind paraphrase questions)
+## Measured (demo library, blind paraphrase questions, hit@5)
 
-| configuration | hit@5 | MRR@10 |
-|---|---|---|
-| Italian query, hybrid + rerank | 0.29 | 0.25 |
-| Italian + English `--also`, hybrid + rerank | **0.50** | 0.43 |
-| English query, hybrid + rerank | 0.36 | 0.26 |
+| configuration | v0.2.0 (dev, 14 q) | v0.3.0 dev (14 q) | v0.3.0 **test** (28 held-out q) |
+|---|---|---|---|
+| Italian query, default | 0.29 | 0.79 | **0.64** |
+| Italian + English `--also`, default | 0.50 | 0.86 | **0.79** |
+| English query, default | 0.36 | 0.93 | **0.79** |
+| Verbatim quotation (6) | – | 1.00 (hit@1) | – |
 
-These are deliberately hard questions (no shared words, no author/doc filter, archaic spelling).
-With filters and corpus vocabulary, as in `docs/demo-query-1.md`, results are much better, but blind
-retrieval is the main weakness.
+Done in v0.3.0 (see `docs/BUILD_LOG.md`): stronger embedder (EmbeddingGemma), BM25 demoted to
+candidate injector, whole-chunk reranking fused with vector order, exact-phrase boost.
+Tried and rejected, with numbers: sentence windows with e5 (worse on dev), larger rerank pools 20–30
+(no gain, 2–3× slower), BM25 fused in the ranking (−10 to −35 points on English), int8/q4 Gemma
+(not faster on this CPU), 700-char windows with Gemma (+7–11 hit@1, same hit@5, 2× indexing time).
 
 ## P1: retrieval quality
 
-1. **Stronger embedding model.** `multilingual-e5-small` is the weak link (vector-only hit@5 = 0.14 on
-   Italian questions). Try `multilingual-e5-base`, `bge-m3` (dense + sparse) or a recent small
-   multilingual model, and re-embed. Cost: indexing time ×2–4, RAM +0.5–1.5 GB. Decide with the eval table.
-2. **Language-aware fusion.** BM25 on an Italian query against English books adds noise (hybrid scored
-   below vector-only). Skip or down-weight FTS pools whose query language differs from the document
-   language, and give `--also` translations full FTS weight.
-3. **Bigger rerank pool.** Rerank 30 candidates instead of 18 and measure the hit@5 gain against latency.
+1. **Drama.** Play text (speaker tags, Folio spelling) scores low with every embedder tried: Hamlet and
+   Macbeth account for most remaining misses. Spelling modernisation helped (rank 1416 → 519) but did not
+   fix it. Next: strip speaker prefixes before embedding (P3 #13). Low priority unless a library is drama.
+2. **Latency** (11–14 s/query warm on this laptop, half reranker, half snippets). Options: rerank pool 6,
+   lexical snippets for hits beyond the top 3, or 700-char chunks whose best window is the snippet.
+3. **BM25 on modernised text** for Early Modern documents (needs a second text column for the FTS index).
 4. **Contextual retrieval (optional LLM).** Prepend a 1–2 sentence LLM-written context to each chunk
    before embedding ("Emma's realisation, after Knightley's proposal, that she misjudged everyone…").
    Published results report large drops in failed retrievals. Cost on the demo corpus: about 6.4k calls,
@@ -58,8 +60,9 @@ retrieval is the main weakness.
 
 ## P4: performance and operations
 
-16. **Indexing speed** (~5 chunks/s on this laptop under load): batch embedding in a separate process,
-    int8-quantised ONNX model, or an optional `model2vec` fast mode for very large collections.
+16. **Indexing speed** (EmbeddingGemma ~4 chunks/s, ~30 min for the 6.4k-chunk demo): for very large
+    collections offer `SCRIPTORIUM_EMBED_MODEL=intfloat/multilingual-e5-small` (~4× faster, much weaker)
+    or a `model2vec` fast mode; quantised Gemma was not faster here.
 17. **PDF extraction** (~0.25 s/page with the layout model): parallelise across files; keep the cache.
 18. **Query latency** (6–10 s warm via MCP, 10–20 s from the CLI): reranking dominates. Cache embeddings of
     repeated queries; consider a lighter reranker for interactive use, and keep the MCP server running.

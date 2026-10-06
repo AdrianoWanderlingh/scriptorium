@@ -85,14 +85,168 @@ GOLD = [
     ),
 ]
 
+# Held out: written after the first evaluation and never used to tune anything.
+TEST = [
+    (
+        "Il gatto svanisce lentamente finché resta sospeso solo il suo sorriso",
+        "the cat fades away until only its smile is left hanging in the air",
+        "grin without a cat",
+    ),
+    (
+        "Il principe tiene in mano il teschio del buffone che lo portava in spalla da bambino",
+        "holding the skull of the jester who carried him around as a child",
+        "Alas poore Yorick",
+    ),
+    (
+        "Il poeta lancia il suo urlo selvaggio sopra i tetti del mondo",
+        "the poet sends his wild untamable shout across the rooftops of the earth",
+        "barbaric yawp",
+    ),
+    (
+        "Il figlio disprezza la madre che si è risposata poche settimane dopo il funerale del padre",
+        "the son scorns his mother for remarrying within weeks of his father's burial",
+        "Frailty, thy name",
+    ),
+    (
+        "Gli angeli caduti convocano un consiglio nella loro capitale infernale",
+        "the fallen angels are summoned to a council in their infernal capital",
+        "At Pandemonium",
+    ),
+    (
+        "Il poeta chiede all'agnellino chi gli abbia dato la vita",
+        "the poet asks the young sheep who its maker is",
+        "Little Lamb, who made thee",
+    ),
+    (
+        "La gallina trova un chicco e nessun animale della fattoria vuole aiutarla a seminarlo",
+        "the hen finds a seed of grain and none of the farm animals will help her sow it",
+        "Who will plant this wheat",
+    ),
+    (
+        "L'unico sopravvissuto resta a galla aggrappato alla cassa da morto del suo amico",
+        "the lone survivor stays afloat on a casket turned into a float",
+        "coffin life-buoy",
+    ),
+    (
+        "Knightley rimprovera Emma per aver umiliato la povera zitella durante la gita",
+        "Knightley scolds Emma for humiliating the poor old spinster at the picnic",
+        "badly done, indeed",
+    ),
+    (
+        "Un giovane scozzese rompe una vetrina col bastone per un insulto alla Madonna",
+        "a young Highlander shatters a newsagent's display glass with his cane over an insult to the Virgin",
+        "smashed the shop window",
+    ),
+    (
+        "Uno scienziato ateo sorvola il mondo su una nave volante insieme a un vecchio monaco",
+        "an atheist scientist flies through the sky in an airship with an old monk",
+        "flying ship of Professor Lucifer",
+    ),
+    (
+        "Un nuovo arrivato sostiene che la vera poesia sta dalla parte dell'ordine, contro il poeta anarchico",
+        "a newcomer argues that true poetry is on the side of rules and propriety, against the rebel bard",
+        "a poet of order",
+    ),
+    (
+        "Un quartiere bohémien di Londra con edifici rossi che sembrano una nuvola al crepuscolo",
+        "a bohemian district of London whose crimson buildings look like an evening cloud",
+        "suburb of Saffron Park",
+    ),
+    (
+        "Alla merenda dei matti viene posto un indovinello senza risposta su un uccello nero e una scrivania",
+        "at the mad tea party, an answerless riddle about a black bird and a desk is asked",
+        "raven like a writing-desk",
+    ),
+    (
+        "Il capitano dice che ogni cosa visibile è una maschera di cartone da sfondare",
+        "everything visible is only a cardboard disguise that must be struck through",
+        "pasteboard masks",
+    ),
+    (
+        "Marianne trova ridicolo che un uomo che si lamenta dei reumatismi possa ancora innamorarsi",
+        "Marianne thinks a man who complains about rheumatism is too old and frail for love",
+        "flannel waistcoat",
+    ),
+    (
+        "Emma interpreta l'indovinello in versi del pastore come una proposta di matrimonio per Harriet",
+        "Emma reads the clergyman's word puzzle in verse as a marriage proposal for her friend",
+        "a very good hint",
+    ),
+    (
+        "Un culto vudù di adoratori del diavolo diffuso in America tra meticci che sembrano bianchi",
+        "a voodoo sect of devil-worship spreading in America among people of mixed race",
+        "God of the Gongs",
+    ),
+    (
+        "Un giornalista vuole scrivere uno scandalo sulla leggenda di famiglia di un vecchio duca conservatore",
+        "a journalist plans an exposé on the family curse of an old Tory nobleman",
+        "Devil's Ear of Eyre",
+    ),
+    (
+        "Al primo inseguimento compare l'equipaggio nascosto guidato da un vecchio orientale col turbante",
+        "a hidden crew led by an old Parsee in a turban appears for the first lowering of the boats",
+        "All ready there, Fedallah",
+    ),
+    (
+        "Il narratore è inorridito di dover dividere il letto della locanda con un selvaggio tatuato",
+        "the narrator is horrified to share a bed at the inn with a tattooed savage",
+        "infernal harpooneer was a cannibal",
+    ),
+    (
+        "Una vecchia signora in una valle ha un giardino curatissimo senza un filo d'erba cattiva",
+        "an elderly woman in a valley keeps a tidy cottage garden with no weeds at all",
+        "pleasant valley of Ashton",
+    ),
+    (
+        "Descrizione di una cittadina di mare con la passeggiata sul molo e le cabine da bagno",
+        "a seaside town described with its harbour walkway and bathing machines",
+        "the walk to the Cobb",
+    ),
+    (
+        "Il visone ride all'idea che il grosso orso possa annegare nel ruscello",
+        "the mink laughs at the thought of the huge bear drowning in the stream",
+        "Buster Bear getting",
+    ),
+    (
+        "Il segretario del consiglio anarchico, temuto per il suo ghigno storto",
+        "the anarchist committee's secretary whose crooked grin is dreaded",
+        "twisted smile was regarded",
+    ),
+    (
+        "Un regalo misterioso, uno strumento musicale, arriva a casa della zitella chiacchierona",
+        "a mysterious gift of a musical instrument arrives at the chatty old maid's house",
+        "large-sized square pianoforte",
+    ),
+    (
+        "Una ragazza falsa elogia la dolcezza della padrona di casa e Marianne si rifiuta di risponderle",
+        "an insincere young woman praises their hostess's sweetness and Marianne refuses to agree",
+        "What a sweet woman Lady Middleton is",
+    ),
+    (
+        "Il direttore del giornale ateo perde la pazienza col suo rivale credente",
+        "the editor of the atheist paper loses patience with his devout rival",
+        "enlighten my pagan darkness",
+    ),
+]
+
+# Exact quotations (what a user pastes to locate a passage); query used as is in every config.
+EXACT = [
+    ("To morrow, and to morrow, and to morrow", "walking Shadow"),
+    ("Alas poore Yorick", "Alas poore Yorick"),
+    ("All visible objects, man, are but as pasteboard masks", "pasteboard masks"),
+    ("I sound my barbaric yawp over the roofs of the world", "barbaric yawp"),
+    ("Better to reign in Hell than serve in Heaven", "Better to reign in Hell"),
+    ("Spanish ounce of gold", "ounce of gold"),
+]
+
+SETS = {"dev": GOLD, "test": TEST, "exact": [(q, q, p) for q, p in EXACT]}
+
 CONFIGS = [
     ("it · vector only", dict(mode="vector", rerank=False), "it"),
-    ("it · keywords only (BM25)", dict(mode="fts", rerank=False), "it"),
-    ("it · hybrid", dict(rerank=False), "it"),
-    ("it · hybrid + rerank", dict(), "it"),
-    ("it + en (--also) · hybrid + rerank", dict(), "it+en"),
-    ("en · hybrid", dict(rerank=False), "en"),
-    ("en · hybrid + rerank", dict(), "en"),
+    ("it · default (hybrid + rerank)", dict(), "it"),
+    ("it + en (--also) · default", dict(), "it+en"),
+    ("en · vector only", dict(mode="vector", rerank=False), "en"),
+    ("en · default", dict(), "en"),
 ]
 
 
@@ -104,35 +258,40 @@ def main() -> None:
     lib = Library(sys.argv[1] if len(sys.argv) > 1 else "classici-inglesi")
     rows = lib.table().search().where("kind = 'book'").select(["id", "text"]).limit(None).to_list()
     gold = {}
-    for _, _, phrase in GOLD:
-        ids = {r["id"] for r in rows if norm(phrase) in norm(r["text"])}
-        if not ids:
-            raise SystemExit(f"gold phrase not found in the index: {phrase!r}")
-        gold[phrase] = ids
+    for items in SETS.values():
+        for _, _, phrase in items:
+            ids = {r["id"] for r in rows if norm(phrase) in norm(r["text"])}
+            if not ids:
+                raise SystemExit(f"gold phrase not found in the index: {phrase!r}")
+            gold[phrase] = ids
 
     print(
-        f"# Retrieval evaluation — {lib.name}\n\n{len(GOLD)} known-answer questions; gold = chunk(s) "
-        "containing a distinctive phrase that the question does not use.\n"
+        f"# Retrieval evaluation — {lib.name}\n\nEmbedder `{lib.indexed_model}`. Known-answer questions; "
+        "gold = chunk(s) containing a distinctive phrase that the question does not use. `dev` "
+        f"({len(GOLD)}) guided the design, `test` ({len(TEST)}) is held out, `exact` ({len(EXACT)}) "
+        "are verbatim quotations.\n"
     )
-    print("| configuration | hit@1 | hit@5 | MRR@10 | s/query |\n|---|---|---|---|---|")
     misses: dict[str, list[str]] = {}
-    for label, kwargs, lang in CONFIGS:
-        h1 = h5 = mrr = 0.0
-        t0 = time.time()
-        for it, en, phrase in GOLD:
-            query, also = {"it": (it, None), "en": (en, None), "it+en": (it, [en])}[lang]
-            hits = [h["id"] for h in lib.search(query, k=10, also=also, **kwargs)]
-            rank = next((i for i, h in enumerate(hits, 1) if h in gold[phrase]), None)
-            h1 += rank == 1
-            h5 += rank is not None and rank <= 5
-            mrr += 1 / rank if rank else 0
-            if not rank or rank > 5:
-                misses.setdefault(label, []).append(f"{phrase} (rank {rank or '>10'})")
-        n = len(GOLD)
-        print(f"| {label} | {h1 / n:.2f} | {h5 / n:.2f} | {mrr / n:.2f} | {(time.time() - t0) / n:.1f} |")
+    for set_name, items in SETS.items():
+        print(f"\n## {set_name}\n")
+        print("| configuration | hit@1 | hit@5 | MRR@10 | s/query |\n|---|---|---|---|---|")
+        for label, kwargs, lang in CONFIGS if set_name != "exact" else [("as typed · default", {}, "en")]:
+            h1 = h5 = mrr = 0.0
+            t0 = time.time()
+            for it, en, phrase in items:
+                query, also = {"it": (it, None), "en": (en, None), "it+en": (it, [en])}[lang]
+                hits = [h["id"] for h in lib.search(query, k=10, also=also, **kwargs)]
+                rank = next((i for i, h in enumerate(hits, 1) if h in gold[phrase]), None)
+                h1 += rank == 1
+                h5 += rank is not None and rank <= 5
+                mrr += 1 / rank if rank else 0
+                if not rank or rank > 5:
+                    misses.setdefault(f"{set_name} · {label}", []).append(f"{phrase} (rank {rank or '>10'})")
+            n = len(items)
+            print(f"| {label} | {h1 / n:.2f} | {h5 / n:.2f} | {mrr / n:.2f} | {(time.time() - t0) / n:.1f} |")
     print("\n## Misses (not in top 5)\n")
-    for label, items in misses.items():
-        print(f"- **{label}**: " + "; ".join(items))
+    for label, found in misses.items():
+        print(f"- **{label}**: " + "; ".join(found))
 
 
 if __name__ == "__main__":

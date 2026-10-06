@@ -6,9 +6,11 @@ description: Private book knowledge bases (Scriptorium). Use when the user says 
 # Scriptorium
 
 Local, CPU-only knowledge bases built from books and documents. Each library is a folder under
-`libraries/<name>/` in this repo (or `$SCRIPTORIUM_HOME`) with its sources, a hybrid search index, a map
-(outline, keywords, entity graph) and a wiki of notes. Each library also has its own skill
+`libraries/<name>/` in this repo (or `$SCRIPTORIUM_HOME`) with its sources, a hybrid search index, a
+map (outline, keywords, entity graph) and a wiki of notes. Each library also has its own skill
 `knowledge-base-<name>` with the query workflow.
+
+From the clone root:
 
 ```bash
 S=.venv/bin/scriptorium
@@ -33,8 +35,8 @@ $S skills                          # refresh the knowledge-base-* skills (also d
   user gives you authors/titles: citations depend on it.
 - Scanned PDFs (no text layer): build warns "probably a scan"; OCR first with
   `ocrmypdf -l ita+eng in.pdf out.pdf` (install `ocrmypdf tesseract-ocr-ita` if missing).
-- Indexing is CPU-bound: about 5 passages/s on this laptop (a 300-page book ≈ 1–2 min). Tell the user
-  before starting a big batch; run it in the background and report progress.
+- Indexing is CPU-bound: about 4 passages/s (a 300-page book ≈ 1–2 min). Tell the user before starting
+  a big batch; run it in the background and report progress.
 - Every build appends a record to `libraries/NAME/build-log.jsonl` (timings, warnings, skipped files).
 
 ## Query, cite, write

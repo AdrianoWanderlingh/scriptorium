@@ -16,11 +16,11 @@ import numpy as np
 import pyarrow as pa
 
 from . import mapper, models
-from .config import EMBED_DIM, HOME, SUPPORTED_EXTENSIONS, LibraryConfig
+from .config import EMBED_DIM, EMBED_MODEL, HOME, SUPPORTED_EXTENSIONS, LibraryConfig
 from .ingest import Document, load, slugify, source_sha
 from .structure import split_sentences, structure
 from .style import describe, style_card
-from .textstats import detect_lang
+from .textstats import detect_lang, is_early_modern, modernize
 
 SCHEMA = pa.schema(
     [
@@ -39,6 +39,12 @@ SCHEMA = pa.schema(
     ]
 )
 RRF_K = 60
+RERANK_POOL = 10  # top vector hits the cross-encoder reads (~0.5 s each on CPU); 20-30 measured no better
+KEYWORD_POOL = 3  # top BM25 hits per phrasing added to that pool
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip(" \t.,;:!?\"'“”‘’«»").lower()
 
 
 def _sql(value: str) -> str:
@@ -71,9 +77,9 @@ class Library:
         for sub in ("sources", "cache", "map", "wiki"):
             (root / sub).mkdir(parents=True, exist_ok=True)
         if not (root / "library.json").exists():
-            LibraryConfig(name=name, description=description, topic=topic, fts_language=fts_language).save(
-                root / "library.json"
-            )
+            LibraryConfig(
+                name=name, description=description, topic=topic, fts_language=fts_language, embed_model=EMBED_MODEL
+            ).save(root / "library.json")
         return cls(name)
 
     @staticmethod
@@ -101,7 +107,21 @@ class Library:
         return self._db
 
     def table(self):
-        return self.db.create_table("chunks", schema=SCHEMA, exist_ok=True)
+        if "chunks" in self.db.table_names():
+            return self.db.open_table("chunks")
+        return self.db.create_table("chunks", schema=SCHEMA)
+
+    @property
+    def indexed_model(self) -> str:
+        """Embedder of the stored vectors; libraries built before v0.3 have no record and used e5-small."""
+        return self.config.embed_model or "intfloat/multilingual-e5-small"
+
+    def _check_model(self) -> None:
+        if self.indexed_model != EMBED_MODEL:
+            raise RuntimeError(
+                f"library '{self.name}' was indexed with {self.indexed_model}, the current embedder is "
+                f"{EMBED_MODEL}: run `scriptorium -l {self.name} build` to re-embed it"
+            )
 
     def _json(self, name: str, default):
         path = self.map_dir / name
@@ -140,6 +160,14 @@ class Library:
     # ------------------------------------------------------------------ build
     def build(self, force: bool = False, log=print) -> dict:
         t0 = time.time()
+        if self.indexed_model != EMBED_MODEL:
+            log(f"  embedder changed ({self.indexed_model} → {EMBED_MODEL}): re-embedding everything")
+            if "chunks" in self.db.table_names():
+                self.db.drop_table("chunks")
+            self._docs = {}
+            self.config.embed_model = EMBED_MODEL
+            self.config.save(self.root / "library.json")
+            force = True
         files = sorted(
             p
             for p in self.sources.rglob("*")
@@ -166,7 +194,10 @@ class Library:
                 events.append({"source": rel, "status": "skipped", "reason": "no text extracted"})
                 continue
             lang = detect_lang(doc.text)
-            vectors = models.embed_passages([f"{doc.title} — {c.section}\n{c.text}" for c in chunks])
+            spell = modernize if is_early_modern(doc.text) else str
+            vectors = models.embed_passages(
+                [spell(c.text) for c in chunks], [f"{doc.title} — {c.section}" for c in chunks]
+            )
             if old_id:
                 table.delete(f"doc_id = {_sql(old_id)}")
             table.delete(f"doc_id = {_sql(doc.doc_id)}")
@@ -248,7 +279,7 @@ class Library:
             self._fts_and_entities()
         stats = {
             "docs": len(self.docs),
-            "chunks": table.count_rows(),
+            "chunks": self.table().count_rows(),
             "changed": changed,
             "entities": len(self.entity_index["entities"]),
             "seconds": round(time.time() - t0, 1),
@@ -345,10 +376,16 @@ class Library:
         mode: str = "hybrid",
     ) -> list[dict]:
         """`also`: extra phrasings of the same need (e.g. the query translated into the language
-        of the books, synonyms, period vocabulary). All are fused; the reranker judges by `query`.
-        `mode`: "hybrid" (default), "vector" or "fts" — single-retriever modes exist for evaluation."""
+        of the books, synonyms, period vocabulary); a passage scores by its best-matching phrasing.
+        `mode`: "hybrid" (default), "vector" or "fts" — single-retriever modes exist for evaluation.
+
+        Measured on scripts/eval_retrieval.py (docs/eval-*.md): semantic vectors rank; keyword (BM25)
+        hits only join the reranker's pool and the exact-phrase check, because fusing them into the
+        ranking hurt paraphrased questions. The rerank order is fused with the vector order, since
+        either alone is less reliable at the top."""
         if mode not in ("hybrid", "vector", "fts"):
             raise ValueError(f"unknown mode {mode!r}")
+        self._check_model()
         table = self.table()
         where = self._where(author, doc, kind)
         queries = [query, *(also or [])]
@@ -366,37 +403,40 @@ class Library:
             "page",
             "text",
         ]
-        pools = []
-        has_fts = any("text" in idx.columns for idx in table.list_indices())
-        for q, qv in zip(queries, qvecs, strict=True):
-            if mode != "fts":
-                vq = table.search(qv).distance_type("cosine").select(cols).limit(30)
-                pools.append((vq.where(where, prefilter=True) if where else vq).to_list())
-            if has_fts and mode != "vector":
-                fq = table.search(q, query_type="fts").select(cols).limit(30)
-                pools.append((fq.where(where) if where else fq).to_list())
-        fused: dict[str, float] = defaultdict(float)
         rows: dict[str, dict] = {}
-        for pool in pools:
-            for rank, row in enumerate(pool):
-                fused[row["id"]] += 1 / (RRF_K + rank)
-                rows[row["id"]] = row
-        pool_size = 24 if per_doc else 18
-        candidates = sorted(fused, key=fused.get, reverse=True)[: pool_size if rerank else k * 3]
-        windows = self._best_windows([rows[c]["text"] for c in candidates], qvecs)
-        if rerank and candidates:
-            scores = models.rerank(
-                query,
-                [
-                    f"{rows[c]['title']} — {rows[c]['section']}\n{w['context']}"
-                    for c, w in zip(candidates, windows, strict=True)
-                ],
-            )
-            ranked = sorted(zip(scores, candidates, windows, strict=True), key=lambda x: x[0], reverse=True)
-        else:
-            ranked = [(fused[c], c, w) for c, w in zip(candidates, windows, strict=True)]
+        sim: dict[str, float] = {}
+        if mode != "fts":
+            for qv in qvecs:
+                vq = table.search(qv).distance_type("cosine").select(cols).limit(100 if per_doc else 50)
+                for row in (vq.where(where, prefilter=True) if where else vq).to_list():
+                    rows[row["id"]] = row
+                    sim[row["id"]] = max(sim.get(row["id"], -1.0), 1 - row["_distance"])
+        keyword: list[list[str]] = []
+        if mode != "vector" and any("text" in idx.columns for idx in table.list_indices()):
+            for q in queries:
+                fq = table.search(q, query_type="fts").select(cols).limit(20)
+                found = (fq.where(where) if where else fq).to_list()
+                rows.update((r["id"], r) for r in found)
+                keyword.append([r["id"] for r in found])
+        vector_order = sorted(sim, key=sim.get, reverse=True)
+        if mode == "fts":
+            vector_order = list(dict.fromkeys(i for lst in keyword for i in lst))
+        pool = list(dict.fromkeys(vector_order[:RERANK_POOL] + [i for lst in keyword for i in lst[:KEYWORD_POOL]]))
+        if rerank and pool:
+            texts = [f"{rows[c]['title']} — {rows[c]['section']}\n{rows[c]['text']}" for c in pool]
+            score = dict(zip(pool, models.rerank(query, texts), strict=True))
+            fused: dict[str, float] = defaultdict(float)
+            for order in (sorted(pool, key=score.get, reverse=True), pool):
+                for rank, c in enumerate(order):
+                    fused[c] += 1 / (RRF_K + rank)
+            pool = sorted(pool, key=fused.get, reverse=True)
+        phrases = [p for p in (_norm(q) for q in queries) if len(p) > 8]
+        nearby = dict.fromkeys(vector_order[:RERANK_POOL] + [i for lst in keyword for i in lst])
+        exact = [c for c in nearby if any(p in _norm(rows[c]["text"]) for p in phrases)]
+        ranked = list(dict.fromkeys(exact + pool + vector_order))
+
         hits, per = [], Counter()
-        for score, cid, window in ranked:
+        for cid in ranked:
             row = rows[cid]
             if per_doc and per[row["doc_id"]] >= per_doc:
                 continue
@@ -404,46 +444,41 @@ class Library:
             hits.append(
                 {
                     "id": cid,
-                    "score": round(score, 3),
+                    "score": round(sim.get(cid, 0.0), 3),
                     "cite": self.cite(row),
                     "doc_id": row["doc_id"],
                     "section": row["section"],
-                    "snippet": window["snippet"],
                     "text": row["text"],
                 }
             )
             if len(hits) >= k:
                 break
+        for hit, window in zip(hits, self._best_windows([h["text"] for h in hits], qvecs), strict=True):
+            hit["snippet"] = window["snippet"]
         return hits
 
     @staticmethod
     def _best_windows(texts: list[str], qvecs: np.ndarray, max_chars: int = 380) -> list[dict]:
-        """Per text, the 1-2 sentence window closest to any query vector (the snippet) and a
-        wider context around it (what the reranker reads)."""
-        windows, owners, spans = [], [], []
-        sentences = []
+        """Per text, the 1-2 sentence window closest to any query vector: the snippet."""
+        windows, owners = [], []
         for i, text in enumerate(texts):
             sents = split_sentences(text.replace("\n", " ")) or [text]
-            sentences.append(sents)
-            for j in range(len(sents)):
-                window = " ".join(sents[j : j + 2])
-                if len(window) > max_chars and j + 1 < len(sents):
-                    window = sents[j]
-                windows.append(window[:max_chars])
+            j = 0
+            while j < len(sents):
+                nxt = sents[j + 1] if j + 1 < len(sents) else ""
+                step = 2 if nxt and len(sents[j]) + len(nxt) < max_chars else 1
+                windows.append(" ".join(sents[j : j + step])[:max_chars])
                 owners.append(i)
-                spans.append(j)
-        out = [{"snippet": t[:max_chars], "context": t[:900]} for t in texts]
+                j += step
+        out = [{"snippet": t[:max_chars]} for t in texts]
         if not windows:
             return out
-        sims = (models.embed_passages(windows, batch_size=32) @ qvecs.T).max(axis=1)
-        best: dict[int, tuple[float, int, str]] = {}
-        for owner, j, window, sim in zip(owners, spans, windows, sims, strict=True):
-            if owner not in best or sim > best[owner][0]:
-                best[owner] = (sim, j, window)
-        for i, (_, j, window) in best.items():
-            sents = sentences[i]
-            context = " ".join(sents[max(0, j - 1) : j + 3])
-            out[i] = {"snippet": window, "context": context[:900]}
+        sims = (models.embed_passages(windows, batch_size=16) @ qvecs.T).max(axis=1)
+        best: dict[int, float] = {}
+        for owner, window, s in zip(owners, windows, sims, strict=True):
+            if owner not in best or s > best[owner]:
+                best[owner] = s
+                out[owner] = {"snippet": window}
         return out
 
     def read(self, cid: str, before: int = 0, after: int = 0) -> dict:
@@ -627,7 +662,7 @@ class Library:
             sha="",
         )
         _, chunks = structure(doc, self.config.chunk_chars)
-        vectors = models.embed_passages([f"{title} — {c.section}\n{c.text}" for c in chunks])
+        vectors = models.embed_passages([c.text for c in chunks], [f"{title} — {c.section}" for c in chunks])
         table = self.table()
         table.delete(f"doc_id = {_sql(doc.doc_id)}")
         table.add(

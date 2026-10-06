@@ -1,6 +1,6 @@
 [project]
 name = "scriptorium"
-version = "0.2.0"
+version = "0.3.0"
 description = "Private, CPU-only knowledge bases from digitised books: hybrid search, map, entity graph, style cards, MCP + Agent Skill"
 readme = "README.md"
 requires-python = ">=3.12"

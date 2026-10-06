@@ -47,6 +47,8 @@ def test_round_trip(tmp_path: Path):
 
     hits = run("search", "Basilico fabbriche", "-k", "1", home=home)
     assert "Gabriele Basilico" in hits
+    hits = run("search", "Le tinte pastello dei muri di provincia", "-k", "1", "--no-rerank", home=home)
+    assert "prova-saggio-sul-paesaggio#0001" in hits  # verbatim quotation goes first
 
     assert "Il colore non è decorazione" in run("read", "prova-saggio-sul-paesaggio#0000", "--after", "1", home=home)
     assert "Saved" in run(
@@ -60,3 +62,16 @@ def test_round_trip(tmp_path: Path):
     )
     assert "note-sintesi-colore" in run("search", "temperatura emotiva", "--kind", "note", "-k", "1", home=home)
     assert "'changed': 0" in run("build", home=home)
+
+    config = home / "test" / "library.json"
+    config.write_text(config.read_text().replace("google/embeddinggemma-300m", "intfloat/multilingual-e5-small"))
+    stale = subprocess.run(
+        [str(CLI), "-l", "test", "search", "colore"],
+        env={**os.environ, "SCRIPTORIUM_HOME": str(home), "PYTHONWARNINGS": "ignore"},
+        capture_output=True,
+        text=True,
+    )
+    assert stale.returncode != 0 and "re-embed" in stale.stdout + stale.stderr
+    rebuilt = run("build", home=home)
+    assert "re-embedding everything" in rebuilt and "'docs': 2" in rebuilt
+    assert "prova-saggio-sul-paesaggio#0000" in run("search", "nebbia e cieli enormi", "-k", "1", home=home)

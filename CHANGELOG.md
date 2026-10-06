@@ -2,6 +2,29 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
+## [0.3.0] - 2026-10-01
+
+Retrieval rebuilt on measurements (`docs/eval-2026-10-01-v0.3.0.md`). Held-out test set, hit@5:
+Italian question 0.11 → 0.64, Italian + English `--also` 0.79, verbatim quotations 1.00 (hit@1).
+
+### Changed
+- Embedder `google/embeddinggemma-300m` (768-d) replaces `multilingual-e5-small`; model prompts per spec.
+  Libraries record their embedder in `library.json`; `build` re-embeds automatically when it changes,
+  `search` refuses mismatched vectors with a clear message.
+- Ranking: vector similarity (best of `query` + `also`) ranks; BM25 hits only join the rerank pool
+  (top 3 per phrasing); the reranker reads whole chunks (was: 900-char windows) on a pool of ~10–16
+  and its order is fused with the vector order; verbatim matches of the query go first.
+- Snippets are chosen only for the returned hits, on sentence pairs (half the cost).
+- Early Modern English spelling (Folio: haue, vp, Ideot) is modernised in the text sent to the
+  embedder, for documents detected as such; stored text and citations keep the original.
+
+### Added
+- 28 held-out test questions and 6 exact-quotation checks in `scripts/eval_retrieval.py`.
+
+### Fixed
+- Build stats counted chunks on a stale table handle (notes indexed in the same build were missing).
+- Opening a library whose stored vectors have another dimension no longer fails on schema mismatch.
+
 ## [0.2.0] - 2026-10-01
 
 ### Added
